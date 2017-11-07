@@ -3,18 +3,7 @@
 #include <unordered_set>
 #include <QPainter>
 
-namespace std {
-    template <>
-    struct hash<QPoint>
-    {
-        std::size_t operator()(const QPoint& point) const
-        {
-            return (static_cast<size_t>(point.x()) << 32) ^ static_cast<size_t>(point.y());
-        }
-    };
-}
-
-std::unordered_set<QPoint> GetPoints(QImage& image, QPoint seed)
+std::deque<QPoint> GetPoints(QImage& image, QPoint seed)
 {
     // A really simple algorithm for the time being. Feel free to improve!
 
@@ -33,8 +22,10 @@ std::unordered_set<QPoint> GetPoints(QImage& image, QPoint seed)
 
     const QRgb oldRgba = getPixel(seed.x(), seed.y());
 
+    std::vector<unsigned char> processedAlready(width * height);
+
     std::deque<QPoint> backlog = { seed };
-    std::unordered_set<QPoint> processed;
+    std::deque<QPoint> points;
 
     while (!backlog.empty()) {
         const QPoint& point = backlog.front();
@@ -42,18 +33,22 @@ std::unordered_set<QPoint> GetPoints(QImage& image, QPoint seed)
         const int y = point.y();
         if (x >= 0 && y >= 0 && x < width && y < height) {
             const QRgb rgba = getPixel(x, y);
-            if (rgba == oldRgba && processed.find(point) == processed.end()) {
-                processed.insert(point);
-                backlog.push_back(QPoint(x - 1, y));
-                backlog.push_back(QPoint(x, y - 1));
-                backlog.push_back(QPoint(x + 1, y));
-                backlog.push_back(QPoint(x, y + 1));
+            if (rgba == oldRgba) {
+                unsigned char& isProcessedAlready = processedAlready[(y * width) + x];
+                if (!isProcessedAlready) {
+                    isProcessedAlready = true;
+                    points.push_back(point);
+                    backlog.push_back(QPoint(x - 1, y));
+                    backlog.push_back(QPoint(x, y - 1));
+                    backlog.push_back(QPoint(x + 1, y));
+                    backlog.push_back(QPoint(x, y + 1));
+                }
             }
         }
         backlog.pop_front();
     }
 
-    return processed;
+    return points;
 }
 
 void FloodFill(QPixmap& pixmap, QPoint seed, QColor newColor)
