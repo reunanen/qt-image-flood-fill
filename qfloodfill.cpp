@@ -1,6 +1,7 @@
 #include "qfloodfill.h"
 #include <deque>
 #include <unordered_set>
+#include <stdexcept>
 #include <QPainter>
 
 std::deque<QPoint> GetPoints(QImage& image, QPoint seed)
